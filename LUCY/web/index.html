@@ -1,0 +1,733 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="data:,">
+<title>LUCY: order food with your voice</title>
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root{--ink:#10231D;--sun:#F4B223;--paper:#FFFDF6;--muted:#33463F;--danger:#9B1C14;--teal:#10231D;--s:1}
+*{box-sizing:border-box}
+body{margin:0;background:var(--sun);color:var(--ink);font:1.2rem/1.5 "Atkinson Hyperlegible","Noto Sans Devanagari","Noto Sans Telugu","Kohinoor Devanagari","Kohinoor Telugu",system-ui,sans-serif}
+[hidden]{display:none!important}
+h1,h2,p{margin:0}
+button{font:inherit;color:inherit;cursor:pointer;border:3px solid var(--ink);background:var(--paper);border-radius:1.3rem 1.3rem 1.3rem .3rem;min-height:3.8rem;padding:.5rem 1.3rem;font-weight:700}
+button:hover,button[aria-pressed=true]{background:var(--ink);color:var(--sun)}
+:focus-visible{outline:4px solid var(--paper);box-shadow:0 0 0 7px var(--ink)}
+.start{min-height:100dvh;display:grid;place-content:center;justify-items:center;gap:2rem;padding:2rem;text-align:center}
+.start h1{font-size:clamp(2.4rem,7vw,4.4rem);line-height:1.05;max-width:14ch;letter-spacing:-.02em}
+.start p{max-width:32ch}
+.orb{width:min(17rem,66vw);height:min(17rem,66vw);border-radius:50%;background:var(--ink);color:var(--sun);border:0;font-size:2.4rem;box-shadow:0 0 0 1rem rgba(16,35,29,.25),0 0 0 2.2rem rgba(16,35,29,.12)}
+.orb:hover{background:var(--ink);color:var(--paper)}
+.shell{display:grid;grid-template-columns:13rem 1fr;min-height:100dvh}
+nav{background:var(--ink);color:var(--sun);padding:1.4rem 1rem}
+.brand{font-size:1.8rem;letter-spacing:.04em}
+#rail{list-style:none;margin:1.6rem 0 0;padding:0;display:grid;gap:.35rem}
+#rail li{padding:.45rem .8rem;border-radius:.5rem;opacity:.6}
+#rail li[data-s=done]{opacity:.85}#rail li[data-s=done]::before{content:"\2713  "}
+#rail li[data-s=active]{opacity:1;background:var(--sun);color:var(--ink);font-weight:700}
+main{padding:clamp(1.2rem,4vw,3rem);display:grid;gap:1.5rem;align-content:start;max-width:60rem}
+main:focus{outline:none}
+.top{display:flex;align-items:center;gap:2rem;padding:1.3rem 0 .6rem}
+#orb{width:5rem;height:5rem;border-radius:50%;background:var(--ink);position:relative;flex:none}
+#orb::before,#orb::after{content:"";position:absolute;inset:-.6rem;border-radius:50%;border:3px solid var(--ink);opacity:.35}
+#orb::after{inset:-1.3rem;opacity:.16}
+#orb[data-s=listening]::before{animation:ring 1.2s ease-out infinite}
+#orb[data-s=speaking]{animation:breathe .8s ease-in-out infinite alternate}
+#orb[data-s=thinking]{background:transparent;border:4px dashed var(--ink)}
+@keyframes ring{from{transform:scale(.9);opacity:.6}to{transform:scale(1.4);opacity:0}}
+@keyframes breathe{to{transform:scale(1.12)}}
+@media(prefers-reduced-motion:reduce){#orb,#orb::before{animation:none!important}}
+#lamp{font-weight:700;font-size:1.3rem}
+#cap{font-size:clamp(1.6rem,3.4vw,2.6rem);line-height:1.2;font-weight:700;letter-spacing:-.01em}
+#heard{min-height:1.6rem;color:var(--muted)}
+.opts{display:flex;flex-wrap:wrap;gap:.8rem}
+.opts button{min-height:4.4rem;min-width:11rem;font-size:1.4rem}
+.typed{display:flex;gap:.6rem}
+.typed input{flex:1;font:inherit;padding:.6rem 1rem;border:3px solid var(--ink);border-radius:.8rem;background:var(--paper);color:var(--ink);min-height:3.8rem}
+#snap{min-height:7rem;font-size:1.7rem;background:var(--ink);color:var(--sun)}
+h2{font-size:1.3rem}#order{margin:0;padding-left:1.4rem}
+#err{padding:.9rem 1.1rem;border:3px solid var(--danger);border-radius:.6rem;color:var(--danger);font-weight:700;background:var(--paper)}
+@media(max-width:46rem){.shell{grid-template-columns:1fr}nav{padding:.7rem}#rail{margin:.5rem 0 0;display:flex;overflow-x:auto}#rail li{white-space:nowrap}}
+.dishes{display:grid;gap:.7rem}
+.dish{display:flex;justify-content:space-between;align-items:center;gap:1rem;padding:.8rem 1rem;border:3px solid var(--ink);border-radius:1rem 1rem 1rem .3rem;background:var(--paper)}
+.dish span{display:block;color:var(--muted);font-size:1rem}
+.dish[data-on="1"]{box-shadow:inset .6rem 0 0 var(--ink)}
+.dish[data-now="1"]{background:var(--ink);color:var(--sun)}.dish[data-now="1"] span{color:var(--sun)}
+.qty{display:flex;align-items:center;gap:.5rem}
+.qty button{min-width:3.4rem;min-height:3.4rem;padding:0;font-size:1.6rem}
+.qty output{min-width:2rem;text-align:center;font-weight:700;font-size:1.4rem}
+#notesbox{display:grid;gap:.6rem}
+#notesbox textarea{font:inherit;padding:.7rem 1rem;border:3px solid var(--ink);border-radius:.8rem;background:var(--paper);color:var(--ink);min-height:6rem}
+.nb{display:flex;gap:.6rem;flex-wrap:wrap}
+#msgbar{display:grid;gap:.6rem;border:3px solid var(--ink);border-radius:1rem 1rem 1rem .3rem;padding:1rem;background:var(--paper)}
+.mrow{display:flex;gap:.6rem}
+.mrow input{flex:1;font:inherit;padding:.6rem 1rem;border:3px solid var(--ink);border-radius:.8rem;background:var(--paper);color:var(--ink);min-height:3.6rem}
+#manswer{font-size:1.25rem;font-weight:700;min-height:1.5rem}
+.spd{margin-left:auto;font-size:1rem;display:flex;align-items:center;gap:.5rem}
+.spd select{font:inherit;padding:.3rem .5rem;border:3px solid var(--ink);border-radius:.6rem;background:var(--paper);color:var(--ink)}
+.lcard{flex:1 1 15rem;display:grid;gap:.8rem;align-content:space-between;padding:1rem;border:3px solid var(--ink);border-radius:1rem 1rem 1rem .3rem;background:var(--paper)}
+.lcard p{font-size:1.5rem;font-weight:700;line-height:1.3}
+.lcard[data-now="1"]{background:var(--ink);color:var(--sun)}.lcard[data-now="1"] button{background:var(--sun);color:var(--ink)}
+.wpanel{border:3px solid var(--ink);background:var(--paper);border-radius:1rem;padding:1rem 1.2rem;display:grid;gap:.4rem}
+#wtext{font-size:1.5rem;font-weight:700;line-height:1.3}
+#pick{min-height:4.4rem;font-size:1.3rem}
+</style>
+</head>
+<body>
+<section id="start" class="start">
+  <h1>Order food with your voice</h1>
+  <p>Works in English, Hindi and Telugu. Press any key or tap anywhere to begin.</p>
+  <button id="startBtn" class="orb" autofocus>Start</button>
+</section>
+
+<div id="app" class="shell" hidden>
+  <nav aria-label="Progress"><b class="brand">LUCY</b>
+    <ol id="rail"><li>Language</li><li>Access</li><li>Menu</li><li>Taste</li><li>Order</li><li>Meal</li><li>Bill</li></ol></nav>
+  <main id="main" tabindex="-1">
+    <div class="top"><div id="orb" data-s="idle" aria-hidden="true"></div><span id="lamp" data-s="idle" role="status" aria-live="polite"><span id="lt">Getting ready</span></span>
+      <label class="spd">Voice speed <select id="rate"><option value="1">Normal</option><option value="1.15">Faster</option><option value="1.3" selected>Fast</option><option value="1.5">Very fast</option></select></label></div>
+    <h1 id="cap" aria-live="polite"></h1>
+    <p id="heard" aria-live="polite"></p>
+    <section id="wpanel" class="wpanel" hidden aria-label="Message for the waiter"><h2>For the waiter (English)</h2><p id="wtext" lang="en"></p></section>
+    <div id="opts" class="opts"></div>
+    <section id="msgbar" hidden aria-label="Message bar"><label for="mq"><b>Message bar.</b> Ask LUCY anything about these dishes or food.</label>
+      <div class="mrow"><input id="mq" type="text" autocomplete="off" placeholder="Type your question and press Enter"><button id="msend">Ask</button></div>
+      <p id="manswer" aria-live="polite"></p></section>
+    <div id="dishes" class="dishes"></div>
+    <div id="typedbox" class="typed" hidden><input id="ti" type="text" aria-label="Type your answer" placeholder="Type here and press Enter"><button id="tsend">Send</button></div>
+    <div id="notesbox" hidden><label for="notes"><b>Special cooking instructions</b> (type here, or just speak)</label>
+      <textarea id="notes" placeholder="For example: less oil, no onion, extra crispy"></textarea>
+      <div class="nb"><button id="notesSave">Save instructions</button><button id="notesNone">No special instructions</button></div></div>
+    <button id="snap" hidden>Take a photo. Tap here or press any key.</button>
+    <button id="pick" hidden>Upload a photo from the gallery</button>
+    <input id="file2" type="file" accept="image/*" hidden>
+    <input id="file" type="file" accept="image/*" capture="environment" hidden>
+    <section><h2>Your order</h2><ul id="order"></ul></section>
+    <p id="err" role="alert" hidden></p>
+  </main>
+</div>
+
+<script>
+(() => {
+'use strict';
+const $ = (s) => document.querySelector(s), sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+const S = { lang: 'en', mute: false, noMic: false, rate: 1.3, hold: 700, wait: 6000, order: [], sent: {} };
+let tok = 0, started = false;
+const until = async (f) => { while (!f()) await sleep(100); };
+
+// ---------- server ----------
+async function api(path, o) {
+  const fd = new FormData(); for (const k in o) fd.append(k, o[k]);
+  let r; try { r = await fetch(path, { method: 'POST', body: fd }); } catch (e) { throw new Error('network'); }
+  if (!r.ok) {                                  // keep the server's reason so the screen can show it
+    let d = ''; try { d = (await r.json()).error || ''; } catch (e) {}
+    const e = new Error('service'); e.status = r.status; e.detail = d; throw e;
+  }
+  return r;
+}
+const json = async (p, o) => (await api(p, o)).json();
+const err = (t) => { const e = $('#err'); e.textContent = t; e.hidden = !t; };
+const cap = (t) => { $('#cap').textContent = t; };
+const wshow = (t) => { $('#wpanel').hidden = !t; $('#wtext').textContent = t || ''; };
+const failMsg = (e) => e && e.status === 413 ? 'The photo is too large.' : e && e.status === 429 ? 'Too many requests. Please wait a moment.'
+  : e && e.message === 'network' ? 'Cannot reach the server.' : (e && e.detail) || 'The reading service did not respond.';
+async function shrink(file, max = 2000) {       // phone photos are huge: smaller uploads are faster and always accepted
+  try {
+    const bmp = await createImageBitmap(file), k = Math.min(1, max / Math.max(bmp.width, bmp.height));
+    if (k === 1 && file.size < 3e6) return file;
+    const c = document.createElement('canvas'); c.width = Math.round(bmp.width * k); c.height = Math.round(bmp.height * k);
+    c.getContext('2d').drawImage(bmp, 0, 0, c.width, c.height);
+    const blob = await new Promise((r) => c.toBlob(r, 'image/jpeg', 0.85));
+    return blob && blob.size < file.size ? new File([blob], 'photo.jpg', { type: 'image/jpeg' }) : file;
+  } catch (e) { return file; }
+}
+const stage = (k) => document.querySelectorAll('#rail li').forEach((li, i) => { li.dataset.s = i < k ? 'done' : i === k ? 'active' : ''; });
+const lamp = (s, t) => { $('#orb').dataset.s = s; $('#lamp').dataset.s = s; $('#lt').textContent = t; };
+
+// ---------- speech out ----------
+const tc = new Map(), sc = new Map();
+async function tr(t) {
+  if (S.lang === 'en' || !t) return t;
+  const k = S.lang + t; if (tc.has(k)) return tc.get(k);
+  const o = (await json('/api/translate', { text: t, src: 'en', tgt: S.lang })).text; tc.set(k, o); return o;
+}
+async function speech(t, l) {
+  const k = l + t; if (sc.has(k)) return sc.get(k);
+  const b = await (await api('/api/tts', { text: t, lang: l })).blob(); sc.set(k, b); return b;
+}
+let audio = null, endAudio = null;
+function stopAudio() { const e = endAudio; endAudio = null; if (audio) { audio.pause(); audio = null; } if (e) e(); }
+function play(blob) {
+  return new Promise((res) => {
+    stopAudio();
+    const u = URL.createObjectURL(blob), a = new Audio(u);
+    const done = () => { URL.revokeObjectURL(u); if (audio === a) audio = null; endAudio = null; res(); };
+    a.playbackRate = S.rate; a.onended = a.onerror = done; audio = a; endAudio = done; a.play().catch(done);
+  });
+}
+async function prepare(en) {
+  let t = en, l = 'en', b = null;
+  if (S.lang !== 'en') { try { t = await tr(en); l = S.lang; } catch (e) {} }
+  if (!S.mute) { try { b = await speech(t, l); } catch (e) {} }
+  return { t, b };
+}
+async function say(en) {                       // English in, user's language out
+  let t = en, l = 'en';
+  if (S.lang !== 'en') { try { t = await tr(en); l = S.lang; } catch (e) {} }
+  cap(t); lamp('speaking', 'LUCY is speaking');
+  if (S.mute) { await sleep(Math.min(7000, 1200 + t.length * 45)); return; }   // captions stay readable
+  try { await play(await speech(t, l)); } catch (e) {}
+}
+
+// ---------- listening: records, stops by itself when you stop talking ----------
+function wav(samples, rate) {
+  const b = new ArrayBuffer(44 + samples.length * 2), v = new DataView(b);
+  const w = (o, s) => { for (let i = 0; i < s.length; i++) v.setUint8(o + i, s.charCodeAt(i)); };
+  w(0, 'RIFF'); v.setUint32(4, 36 + samples.length * 2, true); w(8, 'WAVEfmt '); v.setUint32(16, 16, true);
+  v.setUint16(20, 1, true); v.setUint16(22, 1, true); v.setUint32(24, rate, true); v.setUint32(28, rate * 2, true);
+  v.setUint16(32, 2, true); v.setUint16(34, 16, true); w(36, 'data'); v.setUint32(40, samples.length * 2, true);
+  for (let i = 0; i < samples.length; i++) { const s = Math.max(-1, Math.min(1, samples[i])); v.setInt16(44 + i * 2, s < 0 ? s * 0x8000 : s * 0x7FFF, true); }
+  return new Blob([b], { type: 'audio/wav' });
+}
+async function toWav(blob) {
+  const c = new (window.AudioContext || window.webkitAudioContext)();
+  const a = await c.decodeAudioData(await blob.arrayBuffer()); c.close();
+  const o = new OfflineAudioContext(1, Math.max(1, Math.ceil(a.duration * 16000)), 16000), s = o.createBufferSource();
+  s.buffer = a; s.connect(o.destination); s.start();
+  return wav((await o.startRendering()).getChannelData(0), 16000);
+}
+async function listenAuto({ lang, cancelled = () => false, noSpeechMs = 6000, silenceMs = 1300, maxMs = 15000 }) {
+  let st; try { st = await navigator.mediaDevices.getUserMedia({ audio: true }); } catch (e) { throw new Error('mic'); }
+  const ctx = new (window.AudioContext || window.webkitAudioContext)(), an = ctx.createAnalyser(); an.fftSize = 1024;
+  ctx.createMediaStreamSource(st).connect(an);
+  const buf = new Float32Array(an.fftSize), rec = new MediaRecorder(st), parts = [];
+  rec.ondataavailable = (e) => { if (e.data.size) parts.push(e.data); };
+  const stopped = new Promise((r) => { rec.onstop = r; }); rec.start();
+  const t0 = performance.now(); let heard = false, last = t0, fs = 0, fn = 0;
+  await new Promise((resolve) => {
+    const tick = () => {
+      an.getFloatTimeDomainData(buf); let sum = 0; for (let k = 0; k < buf.length; k++) sum += buf[k] * buf[k];
+      const rms = Math.sqrt(sum / buf.length), now = performance.now();
+      if (now - t0 < 350) { fs += rms; fn++; } else if (rms > Math.max(0.02, (fs / Math.max(1, fn)) * 3)) { heard = true; last = now; }
+      if (cancelled() || now - t0 > maxMs) return resolve();
+      if (heard && now - last > silenceMs) return resolve();
+      if (!heard && now - t0 > noSpeechMs) return resolve();
+      setTimeout(tick, 80);
+    };
+    tick();
+  });
+  rec.stop(); await stopped; st.getTracks().forEach((t) => t.stop()); ctx.close();
+  if (cancelled() || !heard) return null;
+  const fd = await toWav(new Blob(parts, { type: rec.mimeType }));
+  return ((await json('/api/asr', { audio: fd, lang })).text || '').trim();
+}
+const listen = (c) => listenAuto({ lang: S.lang, cancelled: c, noSpeechMs: S.wait, silenceMs: S.hold });
+const ALIAS = { yes: ['yes','yeah','yep','ok','okay','sure','correct','right','haan','han','हाँ','हां','అవును'], no: ['no','nope','change','nahi','नहीं','కాదు'], veg: ['vegetarian'], non_veg: ['nonveg','nonvegetarian'] };
+const NEG = ['not','no','non','dont','don','never','without'];
+const NONE_NATIVE = /(नहीं|नही|లేదు|కాదు|nahi)/i;
+function quick(text, opts) {                   // clear one-word answers are matched here, with no server call
+  const tk = tokens(text); if (!tk.length || tk.length > 5) return [];
+  const hits = opts.filter((o) => { const w = tokens(o.label).filter((x) => x.length >= 2); return (w.length && w.every((x) => tk.includes(x))) || tk.some((x) => (ALIAS[o.id] || []).includes(x)); });
+  if (!hits.length) return [];
+  const len = (o) => tokens(o.label).length; hits.sort((a, b) => len(b) - len(a));
+  if (hits.length > 1 && len(hits[0]) === len(hits[1])) return [];
+  const best = hits[0];
+  if (best.id !== 'no' && tk.some((x) => NEG.includes(x) && !tokens(best.label).includes(x))) return [];
+  return [best.id];
+}
+const toEn = async (t) => { if (S.lang === 'en') return t; try { return (await json('/api/translate', { text: t, src: S.lang, tgt: 'en' })).text; } catch (e) { return t; } };
+function typed(raw) {
+  return new Promise((r) => {
+    const w = $('#typedbox'), i = $('#ti'); w.hidden = false; i.value = ''; i.focus();
+    const go = async () => { const v = i.value.trim(); if (!v) return; w.hidden = true; r(raw ? v : await toEn(v)); };
+    $('#tsend').onclick = go; i.onkeydown = (e) => { if (e.key === 'Enter') go(); };
+  });
+}
+async function hear(c = () => false) {         // free speech, returned in English
+  S.raw = ''; if (S.noMic) return typed();
+  lamp('listening', 'Listening'); const h = await listen(c);
+  if (!h) return ''; S.raw = h; $('#heard').textContent = 'I heard: ' + h; lamp('thinking', 'Thinking'); return toEn(h);
+}
+
+// ---------- language step ----------
+const tokens = (t) => ((t || '').normalize('NFC').toLowerCase().match(/[\p{L}\p{M}\p{N}]+/gu)) || [];
+const YES = ['yes','yeah','yep','yup','ok','okay','sure','haan','han','haa','ha','haanji','ji','हाँ','हां','हा','हाँजी','जी','ठीक','सही','అవును','ఔను','అవునండి','సరే','avunu','avnu','aunu'];
+const NONE_RE = /^\W*(no|none|nope|nothing|neither|nahi|nahin)(\W+(of them|of these|of the above|thanks|thank you|please|allergies|allergy|i do not|i don't|for me))*\W*$/i;
+const LW = { en: ['english','इंग्लिश','अंग्रेजी','अंग्रेज़ी','ఇంగ్లీష్','ఇంగ్లీషు','ఆంగ్లం'], hi: ['hindi','हिंदी','हिन्दी','హిందీ'], te: ['telugu','तेलुगु','तेलुगू','తెలుగు','తెలుగులో'] };
+const LQ = {   // [spoken question, displayed question, yes]
+  en: ['Are you comfortable in the language I am speaking?', 'Are you comfortable in the language that is being displayed?', 'Yes'],
+  hi: ['क्या आप उस भाषा में सहज हैं जिसमें मैं बोल रही हूँ?', 'क्या आप उस भाषा में सहज हैं जो स्क्रीन पर दिखाई जा रही है?', 'हाँ'],
+  te: ['నేను మాట్లాడుతున్న భాషలో మీరు సౌకర్యంగా ఉన్నారా?', 'తెరపై చూపిస్తున్న భాషలో మీరు సౌకర్యంగా ఉన్నారా?', 'అవును']
+};
+const OKL = { en: 'Great. We will continue in English.', hi: 'ठीक है, हम हिंदी में बात करेंगे।', te: 'సరే, మనం తెలుగులో మాట్లాడదాం.' };
+const THANKS = { en: 'Thank you for choosing me to assist you in your endeavour.', hi: 'आपकी सहायता करने के लिए मुझे चुनने के लिए धन्यवाद।', te: 'మీకు సహాయం చేయడానికి నన్ను ఎంచుకున్నందుకు ధన్యవాదాలు.' };
+async function chooseLanguage() {
+  const id = ++tok, ok = () => id === tok; let pick = null, micOk = true;
+  const box = $('#opts'); box.textContent = ''; cap('LUCY'); const cards = {};
+  ['en', 'hi', 'te'].forEach((l) => {
+    const c = document.createElement('div'); c.className = 'lcard'; c.lang = l;
+    const p = document.createElement('p'), b = document.createElement('button');
+    p.textContent = LQ[l][1]; b.textContent = LQ[l][2]; b.onclick = () => { pick = l; stopAudio(); };
+    c.append(p, b); box.append(c); cards[l] = c;
+  });
+  try { (await navigator.mediaDevices.getUserMedia({ audio: true })).getTracks().forEach((t) => t.stop()); }
+  catch (e) { micOk = false; err('The microphone is blocked. Allow it in the browser, or tap Yes on a language.'); }
+  outer: for (let round = 0; round < 3 && micOk; round++) {
+    for (const l of ['en', 'hi', 'te']) {
+      if (pick || !ok()) break outer;
+      Object.values(cards).forEach((c) => { c.dataset.now = ''; }); cards[l].dataset.now = '1';
+      lamp('speaking', 'LUCY is speaking');
+      try { await play(await speech(LQ[l][0], l)); } catch (e) {}
+      if (pick) break outer;
+      lamp('listening', 'Listening. Say yes, or tap Yes.');
+      let h = null; try { h = await listenAuto({ lang: l, cancelled: () => pick || !ok() }); } catch (e) { if (e.message === 'mic') break outer; continue; }
+      if (pick || !h) continue;
+      $('#heard').textContent = 'I heard: ' + h; const tk = tokens(h);
+      const named = Object.keys(LW).find((k) => tk.some((w) => LW[k].includes(w)));
+      if (named) pick = named; else if (tk.some((w) => YES.includes(w))) pick = l;
+    }
+  }
+  Object.values(cards).forEach((c) => { c.dataset.now = ''; });
+  while (!pick && !micOk && ok()) await sleep(200);
+  const fb = !pick; S.lang = pick || 'en'; document.documentElement.lang = S.lang; err(''); box.textContent = '';
+  if (fb) await say('I did not hear an answer, so we will continue in English.');
+  else { cap(OKL[S.lang]); try { await play(await speech(OKL[S.lang], S.lang)); } catch (e) {} }
+}
+
+// ---------- one question: LUCY reads the choices, you speak or tap, LUCY selects on screen ----------
+async function ask(q, opts, multi) {
+  const id = ++tok, ok = () => id === tok; let sel = new Set(), clicked = false, fin;
+  const done = new Promise((r) => { fin = r; }), end = () => { clicked = true; stopAudio(); fin(); };
+  const box = $('#opts'); box.textContent = ''; $('#heard').textContent = '';
+  const labels = await Promise.all(opts.map((o) => tr(o.label).catch(() => o.label)));
+  const btns = opts.map((o, i) => {
+    const b = document.createElement('button'); b.textContent = labels[i]; b.setAttribute('aria-pressed', 'false');
+    b.onclick = () => {
+      if (!multi) { sel = new Set([o.id]); paint(); return end(); }
+      if (o.id === 'none') sel = new Set(['none']); else { sel.delete('none'); sel.has(o.id) ? sel.delete(o.id) : sel.add(o.id); }
+      paint();
+    };
+    box.append(b); return b;
+  });
+  const paint = () => btns.forEach((b, i) => b.setAttribute('aria-pressed', String(sel.has(opts[i].id))));
+  if (multi) { const g = document.createElement('button'); g.textContent = await tr('Done').catch(() => 'Done'); g.onclick = end; box.append(g); }
+  const full = q + (q.includes(opts[0].label) ? '' : ' Your choices are: ' + opts.map((o) => o.label).join(', ') + '.') + (multi ? ' You can pick more than one.' : '');
+  for (let n = 0; n < 3 && ok() && !clicked; n++) {
+    await Promise.race([say(n ? 'Please say your choice again, or tap a button.' : full), done]);
+    if (clicked || !ok()) break;
+    if (S.noMic) { await done; break; }
+    if (n === 0 && !multi && !S.mute) opts.forEach((o) => { tr('Got it: ' + o.label + '.').then((t) => speech(t, S.lang)).catch(() => {}); });
+    lamp('listening', 'Listening'); let h = null;
+    try { h = await listen(() => !ok() || clicked); }
+    catch (e) { if (e.message === 'mic') { err('The microphone is blocked. Tap a button.'); await done; break; } }
+    if (clicked || !ok()) break;
+    if (!h) continue;
+    $('#heard').textContent = 'I heard: ' + h; lamp('thinking', 'Thinking');
+    try {
+      const nat = S.lang !== 'en', say1 = (text) => json('/api/interpret', { question: q, options: JSON.stringify(opts), multi: multi ? '1' : '', text });
+      if (multi && (NONE_RE.test(h.trim()) || (nat && NONE_NATIVE.test(h.trim())))) { sel = new Set(['none']); paint(); break; }
+      let ids = multi ? [] : quick(h, opts);
+      if (!ids.length) {                       // the AI understands Hindi and Telugu directly, so no translation step first
+        ids = (await say1(h)).selected;
+        if (!ids.length && nat) { const en = await toEn(h); if (multi && NONE_RE.test(en.trim())) ids = ['none']; else ids = (await say1(en)).selected; }
+      }
+      if (ids.length) {
+        sel = new Set(ids); paint();
+        await say('Got it: ' + opts.filter((o) => sel.has(o.id)).map((o) => o.label).join(', ') + '.'); break;
+      }
+    } catch (e) {}
+  }
+  err(''); box.textContent = '';
+  return [...sel];
+}
+
+async function askSure(q, opts, multi) {
+  for (let n = 0; n < 3; n++) {
+    const r = await ask(n ? 'I did not get an answer. ' + q : q, opts, multi);
+    if (r.length) return r;
+  }
+  return [];
+}
+
+// ---------- photos need one touch or key press; any key or tap anywhere opens the camera ----------
+async function photo(prompt, label) {   // label is for the waiter, so it stays in English
+  const inp = $('#file'), alt = $('#file2'), pk = $('#pick'), b = $('#snap'); inp.value = ''; alt.value = ''; b.textContent = label; b.hidden = false; pk.hidden = false;
+  let got; const p = new Promise((r) => { got = r; });
+  const open = (e) => { if (e.target && e.target.closest && e.target.closest('.spd, #pick, #wpanel button')) return; if (e.type === 'keydown' && (e.key === 'Tab' || e.key === 'Shift')) return; e.preventDefault(); inp.click(); };
+  inp.addEventListener('click', (e) => e.stopPropagation()); alt.addEventListener('click', (e) => e.stopPropagation());
+  pk.onclick = () => alt.click();
+  document.addEventListener('keydown', open); document.addEventListener('click', open);
+  inp.onchange = () => { if (inp.files[0]) got(inp.files[0]); }; alt.onchange = () => { if (alt.files[0]) got(alt.files[0]); };
+  if (prompt) say(prompt);
+  const f = await p;
+  document.removeEventListener('keydown', open); document.removeEventListener('click', open);
+  b.hidden = true; pk.hidden = true; stopAudio(); wshow(''); return f;
+}
+function waitKey() {
+  return new Promise((r) => {
+    const go = (e) => { if (e && e.target && e.target.closest && e.target.closest('.spd')) return; document.removeEventListener('keydown', go); document.removeEventListener('click', go); r(); };
+    document.addEventListener('keydown', go); document.addEventListener('click', go);
+  });
+}
+async function readPhoto(path, file, wait) {   // upload, with spoken reassurance while the AI reads
+  say(wait); const t = setInterval(() => say('Still reading. Thank you for waiting.'), 25000);
+  try { return await json(path, { image: await shrink(file) }); } finally { clearInterval(t); }
+}
+
+// ---------- the conversation ----------
+const ALLERGY = { milk: 'Milk', egg: 'Egg', peanut: 'Peanuts', tree_nut: 'Tree nuts', wheat_gluten: 'Wheat or gluten', soy: 'Soy', fish: 'Fish', shellfish: 'Shellfish', sesame: 'Sesame', mustard: 'Mustard' };
+const COURSE = { starter: 'Starters', main: 'Main course', dessert: 'Desserts', drink: 'Drinks', other: 'Breads and sides' };
+const phrase = (d) => d.name + (d.price ? ', ' + d.price + ' rupees' : '');
+
+function applyCondition(c) {
+  S.blind = c.includes('blind'); S.deaf = c.includes('deaf');
+  if (c.includes('deaf') && !c.includes('blind')) S.mute = true;   // deaf: the screen is enough, no speech
+  if (c.includes('mute')) S.noMic = true;                          // mute: speech and screen both stay on, answers by tap or typing
+}
+function showOrder() {
+  const ul = $('#order'); ul.textContent = '';
+  S.order.forEach((o) => { const li = document.createElement('li'); li.textContent = o.qty + ' x ' + o.name; ul.append(li); });
+  refreshers.forEach((f) => f());
+}
+const SPICE = ['not spicy', 'mild', 'medium', 'hot'];
+const detail = (d) => d.name + (d.price ? ', ' + d.price + ' rupees' : '') + ', ' + (d.spice != null ? SPICE[d.spice] : 'spice level not known') + (d.ingredients.length ? ', made with ' + d.ingredients.slice(0, 4).join(', ') : '') + '.';
+function compareText(ds) {
+  let t = ds.map(detail).join(' ');
+  const p = ds.filter((d) => d.price).sort((x, y) => x.price - y.price);
+  if (p.length >= 2 && p[0].price !== p[p.length - 1].price) t += ' ' + p[0].name + ' is the cheapest, ' + (p[p.length - 1].price - p[0].price) + ' rupees less than ' + p[p.length - 1].name + '.';
+  return t;
+}
+let refreshers = [];
+function changeQty(d, delta) {
+  const ex = S.order.find((x) => x.name === d.name);
+  if (ex) { ex.qty += delta; if (ex.qty <= 0) S.order.splice(S.order.indexOf(ex), 1); }
+  else if (delta > 0) S.order.push({ name: d.name, qty: delta, price: d.price });
+  showOrder();
+}
+const addDish = (d, q = 1) => changeQty(d, q);
+function dishCard(d) {
+  const c = document.createElement('div'); c.className = 'dish';
+  const info = document.createElement('div'), nm = document.createElement('b'), sub = document.createElement('span');
+  nm.textContent = d.name;
+  sub.textContent = [d.price ? 'Rs ' + d.price : '', d.spice != null ? SPICE[d.spice] : '', d.diet === 'non_veg' ? 'non veg' : d.diet === 'veg' ? 'veg' : ''].filter(Boolean).join(', ');
+  info.append(nm, sub);
+  const q = document.createElement('div'); q.className = 'qty';
+  const mk = (t, l, dl) => { const x = document.createElement('button'); x.textContent = t; x.setAttribute('aria-label', l); x.onclick = () => changeQty(d, dl); return x; };
+  const out = document.createElement('output');
+  q.append(mk('\u2212', 'Remove one ' + d.name, -1), out, mk('+', 'Add one ' + d.name, 1));
+  c.append(info, q);
+  refreshers.push(() => { const e = S.order.find((x) => x.name === d.name); out.textContent = e ? e.qty : 0; c.dataset.on = e ? '1' : ''; });
+  return c;
+}
+async function respond(en) {                  // deaf: text only. Mute, blind and everyone else: text and speech
+  let t = en, l = 'en';
+  if (S.lang !== 'en') { try { t = await tr(en); l = S.lang; } catch (e) {} }
+  $('#manswer').textContent = t;
+  if (S.mute) return;
+  lamp('speaking', 'LUCY is speaking');
+  try { await play(await speech(t, l)); } catch (e) {}
+}
+async function queryLLM(q, list) {
+  S.asking = true; stopAudio(); $('#manswer').textContent = '...'; lamp('thinking', 'Looking that up');
+  try {
+    const ctx = JSON.stringify({ diner: S.prefs, dishes: list.map((d) => ({ name: d.name, price: d.price, diet: d.diet, spice: d.spice, ingredients: d.ingredients, allergens: d.allergens, description: d.description })) });
+    await respond((await json('/api/ask', { question: q, context: ctx })).answer);
+  } catch (e) { console.error('message bar failed', e); await respond('Sorry, I could not find an answer right now. Please try again.'); }
+  finally { S.asking = false; lamp('idle', 'Ready'); }
+}
+const isBar = (en, raw) => { const t = (en + ' ' + (raw || '')).toLowerCase(); return /message|मैसेज|मेसेज|संदेश|మెసేజ్|సందేశ/.test(t) && /bar|बार|బార్|open|खोल|తెరవ|ఓపెన్/.test(t); };
+async function openBar(list) {                 // "Lucy, open message bar": then speak your question
+  S.asking = true; await respond('Message bar open. Ask your question.'); S.asking = false;
+  const q = await hear();
+  if (q) await queryLLM(q, list); else await respond('I did not hear a question.');
+}
+async function orderFrom(list, label, all) {   // returns 'next' or 'done'. Shows every dish, reads every dish.
+  const names = all.map((d) => d.name), box = $('#opts'), grid = $('#dishes'); let hit = '', misses = 0;
+  box.textContent = ''; grid.textContent = ''; refreshers = [];
+  const cards = list.map((d) => { const c = dishCard(d); grid.append(c); return c; });
+  const btn = (t, h) => { const x = document.createElement('button'); x.textContent = t; x.onclick = () => { hit = h; stopAudio(); }; box.append(x); };
+  btn('Next course', 'next'); btn('I am done ordering', 'done'); showOrder();
+  $('#msgbar').hidden = false; $('#manswer').textContent = ''; $('#mq').value = '';
+  const sendQ = () => { const q = $('#mq').value.trim(); if (!q) return; $('#mq').value = ''; queryLLM(q, list); };
+  $('#msend').onclick = sendQ; $('#mq').onkeydown = (e) => { if (e.key === 'Enter') sendQ(); };
+  if (S.mute) await say(label + '. ' + list.length + ' dishes are on the screen.');
+  else {
+    const parts = []; for (let i = 0; i < list.length; i += 4) parts.push(list.slice(i, i + 4));
+    const txt = (k) => parts[k].map(phrase).join('. ') + '.';
+    let next = prepare(label + '. I found ' + list.length + ' dishes for you. ' + (S.blind ? 'To ask me any question, say: Lucy, open message bar. ' : '') + txt(0));
+    for (let k = 0; k < parts.length && !hit; k++) {
+      const p = await next; next = k + 1 < parts.length ? prepare(txt(k + 1)) : null;
+      while (S.asking) await sleep(150);
+      if (hit) break;
+      cards.forEach((c) => { c.dataset.now = ''; });
+      parts[k].forEach((d) => { cards[list.indexOf(d)].dataset.now = '1'; });
+      cards[list.indexOf(parts[k][0])].scrollIntoView({ block: 'nearest' });
+      cap(p.t); lamp('speaking', 'LUCY is speaking');
+      if (p.b) { try { await play(p.b); } catch (e) {} }
+    }
+    cards.forEach((c) => { c.dataset.now = ''; });
+  }
+  if (!hit) await say('Say a dish name, or say compare and two dish names. Say next to move on. You can also tap the plus buttons.' + (S.blind ? ' To ask a question, say: Lucy, open message bar.' : ''));
+  while (!hit) {
+    let text = ''; try { text = await Promise.race([hear(() => !!hit), until(() => !!hit)]); } catch (e) {}
+    $('#typedbox').hidden = true;
+    if (hit) break;
+    if (text && isBar(text, S.raw)) { await openBar(list); misses = 0; await say('Say a dish name, or next.'); continue; }
+    if (text && !/\bcompare\b/i.test(text) && /\b(what is|what's|what are|tell me about|describe|explain|ingredients?|made of|made with|taste|difference|how is)\b/i.test(text)) { await queryLLM(text, all); misses = 0; await say('Say a dish name, or next.'); continue; }
+    let r = { orders: [], done: false, action: 'none', compare: [] };
+    if (text) { try { r = await json('/api/order', { text, names: JSON.stringify(names) }); } catch (e) {} }
+    r.orders.forEach((o) => { const d = all.find((x) => x.name === o.name); if (d) addDish(d, o.qty); });
+    if (r.orders.length) await say('Added ' + r.orders.map((o) => o.qty + ' ' + o.name).join(', ') + '.');
+    if (r.action === 'compare') {
+      const ds = r.compare.map((n) => all.find((d) => d.name === n)).filter(Boolean);
+      await say(compareText(ds)); await say('Which would you like?'); misses = 0; continue;
+    }
+    if (r.done) hit = 'done'; else if (r.action === 'next') hit = 'next';
+    if (hit) break;
+    if (r.orders.length) { await say('Anything else here? Say a dish, next, or I am done.'); misses = 0; continue; }
+    if (++misses >= 2) hit = 'next'; else await say('I did not catch that. Tap a dish, or say a dish name, or next.');
+  }
+  grid.textContent = ''; box.textContent = ''; refreshers = []; $('#msgbar').hidden = true;
+  return hit;
+}
+const DIET_TXT = { veg: 'vegetarian', egg: 'vegetarian, eggs are fine', non_veg: 'non vegetarian', jain: 'Jain, no onion and no garlic' };
+function browserSpeak(text) {                  // instant fallback voice built into the browser
+  return new Promise((res) => {
+    try {
+      const u = new SpeechSynthesisUtterance(text); u.lang = 'en-IN'; u.onend = u.onerror = () => res();
+      const v = speechSynthesis.getVoices().find((x) => /^en[-_]IN/i.test(x.lang)) || speechSynthesis.getVoices().find((x) => /^en/i.test(x.lang));
+      if (v) u.voice = v;
+      setTimeout(res, Math.min(20000, 1500 + text.length * 90));   // some browsers never fire the end event
+      speechSynthesis.cancel(); speechSynthesis.speak(u);
+    } catch (e) { res(); }
+  });
+}
+const needsWaiter = () => S.noMic || S.deaf;     // for these diners Lucy speaks to the waiter, always in English
+const waiterWho = () => [S.blind ? 'This customer is blind.' : '', S.deaf ? 'This customer is deaf and cannot hear you, so please point to the screen or write to them.' : '', S.noMic ? 'This customer cannot speak.' : ''].filter(Boolean).join(' ');
+const ONES = ['zero','one','two','three','four','five','six','seven','eight','nine','ten','eleven','twelve','thirteen','fourteen','fifteen','sixteen','seventeen','eighteen','nineteen'],
+  TENS = ['','','twenty','thirty','forty','fifty','sixty','seventy','eighty','ninety'];
+function n2w(n) {
+  if (n < 20) return ONES[n];
+  if (n < 100) return TENS[Math.floor(n / 10)] + (n % 10 ? ' ' + ONES[n % 10] : '');
+  if (n < 1000) return ONES[Math.floor(n / 100)] + ' hundred' + (n % 100 ? ' ' + n2w(n % 100) : '');
+  if (n < 1e6) return n2w(Math.floor(n / 1000)) + ' thousand' + (n % 1000 ? ' ' + n2w(n % 1000) : '');
+  return String(n);
+}
+const ttsClean = (t) => t.replace(/\d+/g, (m) => n2w(parseInt(m, 10))).replace(/[\/&]/g, ' ').replace(/[:;]/g, ',')
+  .replace(/[^A-Za-z ,.'?!-]/g, ' ').replace(/\s+/g, ' ').trim();
+function chunks(en) {                             // short pieces are more reliable for the speech service
+  const parts = en.match(/[^.!?]+[.!?]+\s*/g) || [en], out = []; let cur = '';
+  parts.forEach((p) => { if (cur && (cur + p).length > 220) { out.push(cur.trim()); cur = ''; } cur += p; });
+  if (cur.trim()) out.push(cur.trim());
+  return out.length ? out : [en];
+}
+function playOk(blob) {                           // like play(), but says whether the sound really started
+  return new Promise((res) => {
+    stopAudio();
+    const u = URL.createObjectURL(blob), a = new Audio(u); let ok = false;
+    const done = () => { URL.revokeObjectURL(u); if (audio === a) audio = null; endAudio = null; res(ok); };
+    a.playbackRate = 1;                            // the waiter hears it at normal speed
+    a.onplaying = () => { ok = true; }; a.onended = done; a.onerror = () => { ok = false; done(); };
+    audio = a; endAudio = done; a.play().catch(() => { ok = false; done(); });
+  });
+}
+async function speakToWaiter(en) {                // always spoken, even when the diner's sound is off
+  const pieces = chunks(en).map(ttsClean).filter(Boolean), blobs = pieces.map((t) => speech(t, 'en').catch((e) => { console.error('waiter voice failed', e); return null; }));
+  wshow(en); lamp('speaking', 'LUCY is speaking to the waiter');
+  for (let i = 0; i < pieces.length; i++) {
+    const b = await Promise.race([blobs[i], sleep(8000).then(() => null)]);
+    const ok = b ? await playOk(b) : false;
+    if (!ok) { err('The voice service could not speak part of this, so the browser voice is used. The full text is on the screen.'); await browserSpeak(pieces[i]); }   // service failed or the sound was blocked
+  }
+  err(''); lamp('idle', 'Waiting');
+}
+async function waiterReply() {                  // the waiter answers in English, LUCY translates for the diner
+  wshow('Waiter: please speak now, or type your reply below.'); lamp('listening', 'Listening to the waiter');
+  let t = ''; try { t = (await listenAuto({ lang: 'en', noSpeechMs: 8000 })) || ''; } catch (e) {}
+  if (!t) { wshow('Waiter: please type your reply below.'); t = await typed(true); }
+  wshow(t); await say(t);
+}
+async function waiterLoop(en, okLabel) {          // speak, then wait until the waiter taps
+  const box = $('#opts'); let again = true;
+  while (true) {
+    if (again) await speakToWaiter(en); else wshow(en);
+    const choice = await new Promise((res) => {
+      box.textContent = '';
+      [['Say it again', 'again'], ['Reply to customer', 'reply'], [okLabel, 'ok']].forEach(([t, v]) => { const x = document.createElement('button'); x.textContent = t; x.onclick = () => res(v); box.append(x); });
+    });
+    box.textContent = '';
+    if (choice === 'ok') break;
+    if (choice === 'reply') await waiterReply();
+    again = choice === 'again';
+  }
+  wshow('');
+}
+async function callWaiter(items, o, first) {
+  const en = 'Hello. I am Lucy, an ordering assistant. ' + waiterWho() + ' ' + (first ? 'The order is: ' : 'The customer wants to add: ') +
+    items.map((x) => x.qty + ' ' + x.name).join(', ') + '. ' +
+    (first ? 'Spice level: ' + o.spice.replace('_', ' ') + '. ' +
+      (o.notes ? 'Special cooking instructions: ' + o.notes + '. ' : 'There are no special cooking instructions. ') +
+      'Food preference: ' + (DIET_TXT[o.diet] || o.diet) + '. ' +
+      (o.allergies.length ? 'Allergies: ' + o.allergies.map((a) => ALLERGY[a] || a).join(', ') + '. Please check this carefully. ' : 'No allergies. ') +
+      'The total is about ' + o.total + ' rupees before tax. ' : '') + 'Please confirm the order. Thank you.';
+  await say('I will now tell the waiter. When the waiter is here, press any key or tap the screen.');
+  await waitKey();
+  await waiterLoop(en, 'Order confirmed');
+}
+function mealMenu() {                             // buttons, or press any key / tap and then speak
+  return new Promise(async (res) => {
+    const box = $('#opts'); box.textContent = ''; $('#heard').textContent = ''; lamp('idle', 'Ready when you are');
+    const items = [{ id: 'add', label: 'Add to my order' }, { id: 'feedback', label: 'Complaint or feedback' }, { id: 'done', label: 'I have finished eating' }];
+    const labels = await Promise.all(items.map((o) => tr(o.label).catch(() => o.label)));
+    let over = false;
+    const finish = (v) => { if (over) return; over = true; document.removeEventListener('keydown', gen); document.removeEventListener('click', gen); box.textContent = ''; res(v); };
+    const gen = async (e) => {
+      if (e.target && e.target.closest && e.target.closest('#opts, .spd')) return;
+      if (e.type === 'keydown' && (e.key === 'Tab' || e.key === 'Shift')) return;
+      document.removeEventListener('keydown', gen); document.removeEventListener('click', gen);
+      const r = await ask('What do you need?', items, false); finish(r[0] || 'none');
+    };
+    items.forEach((o, i) => { const b = document.createElement('button'); b.textContent = labels[i]; b.onclick = () => finish(o.id); box.append(b); });
+    document.addEventListener('keydown', gen); document.addEventListener('click', gen);
+  });
+}
+async function getNotes() {                    // type in the box, or speak: whichever comes first
+  const box = $('#notesbox'), ta = $('#notes'); box.hidden = false; ta.value = ''; S.noteVoice = false; let fin = false, val = '';
+  const typedP = new Promise((r) => {
+    $('#notesSave').onclick = () => { fin = true; val = ta.value.trim(); stopAudio(); r(); };
+    $('#notesNone').onclick = () => { fin = true; val = ''; stopAudio(); r(); };
+  });
+  const voice = S.noMic ? new Promise(() => {}) : hear(() => fin).then((t) => { if (t && !fin) { fin = true; val = t; S.noteVoice = true; } else if (!fin) return new Promise(() => {}); });
+  await Promise.race([typedP, voice]);
+  box.hidden = true;
+  if (S.lang !== 'en' && /[^\x00-\x7F]/.test(val)) val = await toEn(val);
+  return val;
+}
+async function run() {
+  stage(0); await chooseLanguage(); stage(1);
+  const cond = await askSure('What type of disability do you have: Vision impairment, Hearing impairment, Speech impairment.', [
+    { id: 'blind', label: 'Vision impairment' }, { id: 'deaf', label: 'Hearing impairment' }, { id: 'mute', label: 'Speech impairment' }, { id: 'none', label: 'None' }], true);
+  applyCondition(cond); stage(2);
+
+  await say('I will now ask the waiter to upload a photo of the menu.');
+  await speakToWaiter('Hello. I am Lucy, an ordering assistant. Waiter, please upload a photo of the menu, using the buttons on the screen.');
+  let menu = null;
+  while (!menu) {
+    const f = await photo('', 'Take a photo of the menu');
+    try { menu = (await readPhoto('/api/menu', f, 'Reading the menu. This can take up to a minute.')).items; }
+    catch (e) { console.error('menu failed', e); err(failMsg(e)); await say('I could not read the menu from that photo. ' + failMsg(e) + ' Let us try again.'); if (e.status === 429) await sleep(5000); }
+  }
+  err(''); stage(3); await say('I found ' + menu.length + ' dishes. I have a few questions to find the right ones for you.');
+
+  const allergyRaw = await askSure('Do you have any allergies?', [
+    ...Object.keys(ALLERGY).map((k) => ({ id: k, label: ALLERGY[k] })), { id: 'none', label: 'No allergies' }], true);
+  const allergies = allergyRaw.filter((a) => a !== 'none');
+  if (!allergyRaw.length) await say('I did not get an answer about allergies, so I will assume none. Please tell the waiter if you have any.');
+  const vn = (await askSure('Veg or non veg?', [{ id: 'veg', label: 'Veg' }, { id: 'non_veg', label: 'Non veg' }], false))[0];
+  let diet = vn || 'veg';
+  if (!vn) await say('I did not get an answer, so I will show only vegetarian dishes.');
+  if (diet === 'veg') diet = (await askSure('Jain or normal veg?', [{ id: 'jain', label: 'Jain' }, { id: 'veg', label: 'Normal veg' }], false))[0] || 'veg';
+  const allowed = (d) => !(diet !== 'non_veg' && d.diet === 'non_veg') && !(diet === 'veg' && d.diet === 'egg') &&
+    !(diet === 'non_veg' && d.diet === 'veg' && (d.course === 'starter' || d.course === 'main')) &&
+    !(diet === 'jain' && (d.jain_possible === false || d.diet === 'egg')) && !d.allergens.some((a) => allergies.includes(a)) &&
+    !(allergies.length && d.confidence === 'low');   // not sure what is in it: do not offer it to an allergic diner
+  const dishes = menu.filter(allowed); S.prefs = { diet, allergies };
+  const courses = Object.keys(COURSE).filter((c) => dishes.some((d) => d.course === c));
+  if (!courses.length) { await say('Sorry, I could not find dishes that match. Please ask the waiter for help.'); return; }
+  const picked = await ask('What types of courses do you want to order?', courses.map((c) => ({ id: c, label: COURSE[c] })), true);
+  if (allergies.length) await say('I read this menu from a photo, so I have left out dishes I am not sure about. Please confirm your allergies with the waiter before eating.');
+
+  stage(4);
+  const chosen = picked.length ? picked : courses, pool = dishes.filter((d) => chosen.includes(d.course));
+  const browse = async () => { for (const c of chosen) { if ((await orderFrom(pool.filter((d) => d.course === c), COURSE[c], pool)) === 'done') break; } };
+  let spice = 'medium', notes = '', confirmed = false;
+  const details = async () => {
+    spice = (await ask('What level of spice would you like the items to be?', [{ id: 'mild', label: 'Mild' }, { id: 'medium', label: 'Medium' }, { id: 'hot', label: 'Hot' }, { id: 'extra_hot', label: 'Extra hot' }], false))[0] || 'medium';
+    notes = '';
+    await say('Do you want to add any specific cooking instructions for the chef? Type them in the box, or say them. If not, tap No special instructions.');
+    for (let n = 0; n < 3; n++) {
+      notes = await getNotes();
+      if (/^\W*(none|no|nothing)\W*$/i.test(notes)) { notes = ''; break; }
+      if (!notes) break;
+      if ((notes.match(/\p{L}/gu) || []).length < 3) { await say('I did not catch that. Please say or type your instructions again.'); notes = ''; continue; }
+      if (!S.noteVoice) break;                 // typed text needs no read-back
+      const yn = await ask('I heard: ' + notes + '. Is that right?', [{ id: 'yes', label: 'Yes' }, { id: 'no', label: 'No' }], false);
+      if (yn[0] !== 'no') break;
+      await say('Okay. Please say or type your instructions again.'); notes = '';
+    }
+  };
+  const totalNow = () => S.order.reduce((s, o) => s + (o.price || 0) * o.qty, 0);
+  await browse();
+  while (S.order.length && !confirmed) {
+    await details();
+    await say('Your order is ' + S.order.map((o) => o.qty + ' ' + o.name).join(', ') + '. Spice: ' + spice.replace('_', ' ') + '.' + (notes ? ' Instructions: ' + notes + '.' : '') + ' About ' + totalNow() + ' rupees before tax.');
+    const yn = await askSure('Is this order correct?', [{ id: 'yes', label: 'Yes' }, { id: 'no', label: 'No, I want to change it' }], false);
+    if (yn[0] === 'no') { await say('Okay, let us change your order.'); await browse(); } else confirmed = true;
+  }
+  const handOver = async () => {
+    const first = !Object.keys(S.sent).length;
+    const items = S.order.map((x) => ({ name: x.name, price: x.price, qty: x.qty - (S.sent[x.name] || 0) })).filter((x) => x.qty > 0);
+    if (!items.length) { await say('You have not added anything new.'); return; }
+    try { await json('/api/orderslip', { order: JSON.stringify(items), spice, notes: first ? notes : '', diet, allergies: allergies.join(',') }); } catch (e) {}
+    await callWaiter(items, { spice, notes, diet, allergies, total: totalNow() }, first);
+    items.forEach((x) => { S.sent[x.name] = (S.sent[x.name] || 0) + x.qty; });
+  };
+  if (S.order.length) await handOver(); else await say('You have not ordered anything yet. You can add dishes any time.');
+
+  stage(5);
+  await say('If you have any complaints or feedback, or want to add something to your order, just reach out to me and I will let the waiter know. Also, consult me once you have eaten and I shall ask the waiter to bring the bill.');
+  for (;;) {
+    cap(await tr('Enjoy your meal. Tap a button, or press any key and tell me what you need.').catch(() => 'Enjoy your meal.'));
+    const a = await mealMenu();
+    if (a === 'done') break;
+    if (a === 'add') { await browse(); await handOver(); }
+    else if (a === 'feedback') {
+      await say('Please tell me your complaint, feedback or message for the waiter.');
+      let fb = ''; for (let n = 0; n < 2 && !fb; n++) { try { fb = await hear(); } catch (e) {} if (!fb && n === 0 && !S.noMic) await say('I did not hear you. Please try again.'); }
+      if (!fb) { await say('I did not hear a message.'); continue; }
+      try { await json('/api/feedback', { text: fb }); } catch (e) {}
+      await say('I will tell the waiter. When the waiter is here, press any key or tap the screen.'); await waitKey();
+      await waiterLoop('Hello. I am Lucy, an ordering assistant. ' + waiterWho() + ' The customer has this message for you: ' + fb, 'Understood');
+    }
+  }
+
+  stage(6);
+  await say('I will now ask the waiter to bring the bill. When the waiter is here, press any key or tap the screen.'); await waitKey();
+  await waiterLoop('Hello. I am Lucy, an ordering assistant. ' + waiterWho() + ' The customer has finished eating and would like the bill. Please bring the bill, then upload a photo of it using the buttons on the screen. Thank you.', 'Understood');
+  let bill = null;
+  while (!bill) {
+    const f = await photo('', 'Take a photo of the bill');
+    try { bill = await readPhoto('/api/bill', f, 'Reading the bill.'); }
+    catch (e) { console.error('bill failed', e); err(failMsg(e)); await say('I could not read the bill. ' + failMsg(e) + ' The waiter will try the photo again.'); if (e.status === 429) await sleep(5000); }
+  }
+  err('');
+  const calc = bill.items.reduce((s, i) => s + i.amount, 0) + bill.charges.reduce((s, c) => s + c.amount, 0);
+  const tot = bill.total != null ? bill.total : calc;
+  const g = $('#dishes'); g.textContent = '';
+  const row = (a, b) => { const d = document.createElement('div'); d.className = 'dish'; const x = document.createElement('b'), y = document.createElement('b'); x.textContent = a; y.textContent = b; d.append(x, y); g.append(d); };
+  bill.items.forEach((i) => row((i.qty > 1 ? i.qty + ' x ' : '') + i.name, 'Rs ' + i.amount)); bill.charges.forEach((c) => row(c.name, 'Rs ' + c.amount)); row('Total', 'Rs ' + tot);
+  let s = 'Your bill has ' + bill.items.length + ' items. ' + bill.items.map((i) => (i.qty > 1 ? i.qty + ' times ' : '') + i.name + ', ' + i.amount + ' rupees').join('. ') + '. ';
+  if (bill.charges.length) s += 'Extra charges: ' + bill.charges.map((c) => c.name + ', ' + (c.amount < 0 ? 'minus ' + -c.amount : c.amount) + ' rupees').join('. ') + '. ';
+  s += 'The total to pay is ' + tot + ' rupees.';
+  if (bill.total != null && Math.abs(calc - bill.total) > 2) s += ' The lines I read add up to ' + calc + ' rupees, which is different. Please check the bill with the waiter.';
+  await say(s);
+  cap(THANKS[S.lang]); lamp('speaking', 'LUCY is speaking');     // spoken out loud for every diner
+  try { await play(await speech(THANKS[S.lang], S.lang)); } catch (e) {}
+  lamp('idle', 'Done'); $('#heard').textContent = 'Press any key to start again.';
+  await waitKey(); location.reload();
+}
+
+function begin() {
+  if (started) return; started = true;
+  $('#start').hidden = true; $('#app').hidden = false; $('#main').focus();
+  run().catch(async () => { err('Something went wrong. Press any key to start again.'); lamp('idle', 'Stopped'); await waitKey(); location.reload(); });
+}
+$('#rate').onchange = (e) => { S.rate = parseFloat(e.target.value) || 1; if (audio) audio.playbackRate = S.rate; };
+$('#start').addEventListener('click', begin);
+document.addEventListener('keydown', (e) => { if (!$('#start').hidden && !e.metaKey && !e.ctrlKey && !e.altKey && e.key !== 'Tab' && e.key !== 'Shift') { e.preventDefault(); begin(); } });
+})();
+</script>
+</body>
+</html>
